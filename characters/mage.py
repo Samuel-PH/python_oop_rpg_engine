@@ -5,13 +5,18 @@ from core.entity_blueprint import AbstractCharacter
 class Mage(AbstractCharacter):
     def __init__(self, name):
         self.name = name
-        self.__health = 80   
+        self.max_health = 80
+        self.__health = self.max_health   
         self.__mana = 100    
         self.attack_power = 15
         self.mood = "Normal" 
 
     def get_health(self): return self.__health
     def get_resource(self): return self.__mana
+
+    def full_heal(self):
+        self.__health = self.max_health
+        self.__mana = 100
 
     def roll_mood(self):
         roll = random.randint(1, 100)
@@ -28,15 +33,20 @@ class Mage(AbstractCharacter):
         elif roll > 85:
             self.mood = "Inspired"
             return f"✨ INSPIRED: Arcane energy swirls perfectly around {self.name}!"
+
+        elif roll < 15:
+            self.mood = "Mana Surge"
+            self.__mana += 15
+            if self.__mana > 100: self.__mana = 100
+            return f"🔵 SURGE: Leylines pulse beneath {self.name}! (+15 Mana)"
             
         else:
             self.mood = "Normal"
-            flavors = [
+            return random.choice([
                 f"💨 The wind howls across the battlefield...",
                 f"👀 {self.name} analyzes the enemy's stance.",
                 f"⚡ Static electricity crackles in the air."
-            ]
-            return random.choice(flavors)
+            ])
 
     def take_damage(self, amount):
         self.__health -= amount
@@ -45,15 +55,12 @@ class Mage(AbstractCharacter):
 
     def attack(self, target):
         if self.mood == "Panic" and random.randint(1, 100) < 50:
-            return f"❌ {self.name} fumbles the incantation! The spell fizzles out!"
-
+            return f"❌ {self.name} fumbles the incantation!"
         damage = self.attack_power
         if self.mood == "Inspired": damage += 10
         if self.mood == "Last Stand": damage *= 2
-
         self.__mana += 10 
         if self.__mana > 100: self.__mana = 100
-        
         msg1 = f"✨ {self.name} fires a magic missile!"
         msg2 = target.take_damage(damage)
         return f"{msg1}\n   {msg2}"
@@ -61,22 +68,19 @@ class Mage(AbstractCharacter):
     def special_move(self, target):
         if self.mood == "Panic" and random.randint(1, 100) < 30:
             return f"❌ {self.name} panics and drops the fireball!"
-            
         mana_cost = 0 if self.mood == "Inspired" else 40
-
         if self.__mana >= mana_cost:
             self.__mana -= mana_cost
             damage = 40 if self.mood == "Last Stand" else 30
             msg1 = f"🔥 {self.name} casts PYROBLAST!"
             msg2 = target.take_damage(damage)
             return f"{msg1}\n   {msg2}"
-        else:
-            return f"❌ {self.name} is out of Mana!"
+        return f"❌ {self.name} is out of Mana!"
 
     def heal(self):
         if self.__mana >= 30:
             self.__mana -= 30
             self.__health += 40
-            if self.__health > 80: self.__health = 80
+            if self.__health > self.max_health: self.__health = self.max_health
             return f"💚 {self.name} casts Healing Spell! Restored 40 HP."
         return f"❌ {self.name} lacks Mana to heal!"
