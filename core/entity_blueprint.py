@@ -21,3 +21,6 @@ class AbstractCharacter(ABC):
 
     @abstractmethod
     def roll_mood(self): pass
+
+    @abstractmethod
+    def full_heal(self): pass

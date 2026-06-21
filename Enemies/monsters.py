@@ -7,74 +7,65 @@ class Goblin(AbstractCharacter):
         self.name = "Sneaky Goblin"
         self.__health = 40
         self.__energy = 100 
-        self.mood = "Normal"
-
     def get_health(self): return self.__health
     def get_resource(self): return self.__energy
-
-    def roll_mood(self):
-        roll = random.randint(1, 100)
-        if roll > 80:
-            self.mood = "Cowardly"
-            return f"🐀 {self.name} looks like it wants to run away!"
-        self.mood = "Normal"
-        return f"💬 {self.name} chatters its teeth menacingly."
-
+    def full_heal(self): pass
+    def roll_mood(self): return "🐀 The Goblin chatters nervously."
     def take_damage(self, amount):
-        self.__health -= amount
-        if self.__health < 0: self.__health = 0
-        return f"👺 {self.name} squeals, taking {amount} damage!"
+        self.__health = max(self.__health - amount, 0)
+        return f"👺 Goblin squeals, taking {amount} damage!"
+    def attack(self, target): return f"🔪 Goblin stabs!\n   {target.take_damage(10)}"
+    def special_move(self, target): return self.attack(target)
+    def heal(self): return "❌ Goblins can't heal!"
 
-    def attack(self, target):
-        if self.mood == "Cowardly":
-            return f"💨 {self.name} is too scared to attack this turn!"
-        msg1 = f"🔪 {self.name} stabs with a rusty dagger!"
-        msg2 = target.take_damage(10)
-        return f"{msg1}\n   {msg2}"
+class Orc(AbstractCharacter):
+    def __init__(self):
+        self.name = "Brutal Orc"
+        self.__health = 80
+        self.__stamina = 100 
+    def get_health(self): return self.__health
+    def get_resource(self): return self.__stamina
+    def full_heal(self): pass
+    def roll_mood(self): return "👹 The Orc beats its chest!"
+    def take_damage(self, amount):
+        self.__health = max(self.__health - amount, 0)
+        return f"👹 Orc grunts, taking {amount} damage!"
+    def attack(self, target): return f"🪓 Orc swings an axe!\n   {target.take_damage(15)}"
+    def special_move(self, target): return f"🔨 Orc SMASH!\n   {target.take_damage(25)}"
+    def heal(self): return "❌ Orcs prefer pain!"
 
-    def special_move(self, target):
-        return self.attack(target) 
-
-    def heal(self):
-        return f"❌ Goblins don't know how to heal!"
+class DarkElf(AbstractCharacter):
+    def __init__(self):
+        self.name = "Corrupted Elf"
+        self.__health = 100
+        self.__mana = 100 
+    def get_health(self): return self.__health
+    def get_resource(self): return self.__mana
+    def full_heal(self): pass
+    def roll_mood(self): return "🧝 The Elf whispers a dark curse."
+    def take_damage(self, amount):
+        self.__health = max(self.__health - amount, 0)
+        return f"🧝 Elf hisses, taking {amount} damage!"
+    def attack(self, target): return f"🏹 Elf fires a shadow arrow!\n   {target.take_damage(12)}"
+    def special_move(self, target): return f"🌑 Elf casts VOID BOLT!\n   {target.take_damage(30)}"
+    def heal(self): 
+        self.__health = min(self.__health + 20, 100)
+        return "🩸 Elf leeches life from the earth! (+20 HP)"
 
 class DemonLord(AbstractCharacter):
     def __init__(self):
-        self.name = "Azazel, The Demon Lord"
+        self.name = "Azazel, Demon Lord"
         self.__health = 250
         self.__dark_magic = 100 
-        self.mood = "Arrogant"
-
     def get_health(self): return self.__health
     def get_resource(self): return self.__dark_magic
-
-    def roll_mood(self):
-        if self.__health < 100:
-            self.mood = "Enraged"
-            return f"🔥 AZAZEL IS ENRAGED! The room fills with hellfire!"
-        return f"👿 Azazel laughs at your pathetic attempts."
-
+    def full_heal(self): pass
+    def roll_mood(self): return "👿 Azazel laughs at your pathetic attempts."
     def take_damage(self, amount):
-        actual = max(amount - 5, 0)
-        self.__health -= actual
-        if self.__health < 0: self.__health = 0
-        return f"👿 Azazel shrugs off the blow, taking {actual} damage."
-
-    def attack(self, target):
-        damage = 25 if self.mood == "Enraged" else 15
-        msg1 = f"⚔️ Azazel swings a massive flaming whip!"
-        msg2 = target.take_damage(damage)
-        return f"{msg1}\n   {msg2}"
-
-    def special_move(self, target):
-        if self.__dark_magic >= 50:
-            self.__dark_magic -= 50
-            msg1 = f"🌑 Azazel casts SOUL CRUSH!"
-            msg2 = target.take_damage(40)
-            return f"{msg1}\n   {msg2}"
-        return self.attack(target)
-
-    def heal(self):
-        self.__health += 20
-        if self.__health > 250: self.__health = 250
-        return f"🩸 Azazel drains life from the shadows! (+20 HP)"
+        self.__health = max(self.__health - (amount - 5), 0)
+        return f"👿 Azazel shrugs off the blow, taking {amount - 5} damage."
+    def attack(self, target): return f"⚔️ Azazel swings a flaming whip!\n   {target.take_damage(20)}"
+    def special_move(self, target): return f"🌑 Azazel casts SOUL CRUSH!\n   {target.take_damage(40)}"
+    def heal(self): 
+        self.__health = min(self.__health + 20, 250)
+        return "🩸 Azazel drains shadows! (+20 HP)"
