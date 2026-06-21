@@ -4,81 +4,82 @@ from core.entity_blueprint import AbstractCharacter
 
 class Warrior(AbstractCharacter):
     def __init__(self, name):
+        super().__init__()
         self.name = name
         self.max_health = 150
         self.__health = self.max_health
         self.__rage = 0      
-        self.__defense = 5
         self.attack_power = 20
         self.mood = "Normal"
 
     def get_health(self): return self.__health
     def get_resource(self): return self.__rage
-
-    def full_heal(self):
+    def full_heal(self): 
         self.__health = self.max_health
         self.__rage = 0
+        for k in self.statuses: self.statuses[k] = False
 
     def roll_mood(self):
         roll = random.randint(1, 100)
-        
-        if self.__health < 40 and roll > 70:
-            self.mood = "Berserk"
-            return f"😡 BERSERK: {self.name} loses control! Defense drops, Attack surges!"
-            
-        elif self.__health < 20 and roll > 85:
+        if self.__health < 30 and roll > 80:
             self.mood = "Last Stand"
-            self.__health += 30
-            return f"🛡️ LAST STAND: {self.name} refuses to fall! (+30 HP)"
-            
+            self.__health += 40
+            for k in self.statuses: self.statuses[k] = False # Cleanses debuffs!
+            return f"🛡️ LAST STAND: {self.name} is filled with determination! Debuffs cleansed! (+40 HP)"
         elif roll < 15:
             self.mood = "Adrenaline"
-            self.__rage += 15
-            if self.__rage > 100: self.__rage = 100
-            return f"⚡ ADRENALINE: {self.name}'s blood pumps faster! (+15 Rage)"
-
-        elif roll < 30:
-            self.mood = "Focused"
-            self.__health += 5
-            if self.__health > self.max_health: self.__health = self.max_health
-            return f"🧘 FOCUSED: {self.name} catches their breath. (+5 HP)"
-            
+            self.__rage = min(self.__rage + 20, 100)
+            return f"⚡ ADRENALINE: {self.name}'s blood pumps faster! (+20 Rage)"
         else:
             self.mood = "Normal"
-            return random.choice([
-                f"⚔️ {self.name} grips their weapon tightly.",
-                f"👀 {self.name} circles the enemy.",
-                f"💨 The battlefield is dead silent."
-            ])
+            return f"⚔️ {self.name} grips their weapon tightly."
 
     def take_damage(self, amount):
-        defense = 0 if self.mood == "Berserk" else self.__defense
-        actual = max(amount - defense, 0)
-        self.__health -= actual
-        if self.__health < 0: self.__health = 0
-        return f"🛡️ {self.name} takes {actual} damage!"
+        if self.statuses["parry"]:
+            self.statuses["parry"] = False
+            return 0, "PARRY" # Triggers stun on attacker in GUI
+            
+        actual = amount
+        if self.statuses["dmg_reduction"]: actual //= 2
+        if self.statuses["vulnerable"]: actual += 10
+        if self.statuses["attack_debuff"]: actual = max(actual - 10, 0)
+
+        self.__health = max(self.__health - actual, 0)
+        return actual, "HIT"
 
     def attack(self, target):
-        self.__rage += 20
-        if self.__rage > 100: self.__rage = 100
-        damage = self.attack_power
-        if self.mood == "Berserk": damage += 15
-        if self.mood == "Last Stand": damage *= 2
-        msg1 = f"🗡️ {self.name} swings a heavy broadsword!"
-        msg2 = target.take_damage(damage)
-        return f"{msg1}\n   {msg2}"
+        self.__rage = min(self.__rage + 20, 100)
+        dmg, effect = target.take_damage(self.attack_power)
+        if effect == "PARRY":
+            self.statuses["stunned"] = True
+            return f"💥 {target.name} PARRIED the attack! {self.name} is Stunned!"
+        elif effect == "BARRIER":
+            return f"✨ {target.name}'s Barrier absorbed the attack!"
+        return f"🗡️ {self.name} swings a heavy broadsword! {target.name} takes {dmg} dmg!"
 
     def special_move(self, target):
         if self.__rage >= 50:
             self.__rage -= 50
-            damage = self.attack_power * 2
-            if self.mood == "Berserk": damage += 20
-            msg1 = f"💥 {self.name} uses EXECUTE!"
-            msg2 = target.take_damage(damage)
-            return f"{msg1}\n   {msg2}"
-        return f"❌ {self.name} lacks Rage (needs 50)!"
+            dmg, effect = target.take_damage(self.attack_power * 2)
+            if effect in ["PARRY", "BARRIER"]: return f"💥 EXECUTE was deflected by {target.name}!"
+            return f"💥 {self.name} uses EXECUTE! {target.name} takes {dmg} dmg!"
+        return f"❌ Not enough Rage (needs 50)!"
 
     def heal(self):
-        self.__health += 30
-        if self.__health > self.max_health: self.__health = self.max_health
-        return f"🩹 {self.name} uses a bandage! Healed for 30."
+        self.__health = min(self.__health + 30, self.max_health)
+        return f"🩹 {self.name} uses a bandage! Healed for 30 HP."
+
+    def defend(self):
+        if random.randint(1, 100) > 70:
+            self.statuses["parry"] = True
+            return f"🛡️ {self.name} enters a PARRY stance! Next attack will be deflected!"
+        self.statuses["dmg_reduction"] = True
+        return f"🛡️ {self.name} raises their guard. Incoming damage halved!"
+
+    def utility(self, target):
+        self.__rage = min(self.__rage + 30, 100)
+        roll = random.randint(1, 100)
+        if roll > 60:
+            target.statuses["vulnerable"] = True
+            return f"🗣️ WARCRY! {self.name} gains Rage! {target.name} is intimidated and Vulnerable!"
+        return f"🗣️ WARCRY! {self.name} gains 30 Rage, but {target.name} is unfazed."

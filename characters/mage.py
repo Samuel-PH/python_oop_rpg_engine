@@ -4,6 +4,7 @@ from core.entity_blueprint import AbstractCharacter
 
 class Mage(AbstractCharacter):
     def __init__(self, name):
+        super().__init__()
         self.name = name
         self.max_health = 80
         self.__health = self.max_health   
@@ -13,74 +14,80 @@ class Mage(AbstractCharacter):
 
     def get_health(self): return self.__health
     def get_resource(self): return self.__mana
-
-    def full_heal(self):
+    def full_heal(self): 
         self.__health = self.max_health
         self.__mana = 100
+        for k in self.statuses: self.statuses[k] = False
 
     def roll_mood(self):
         roll = random.randint(1, 100)
-        
-        if self.__health > 0 and self.__health < 15 and roll > 80:
+        if self.__health < 20 and roll > 80:
             self.mood = "Last Stand"
-            self.__health += 20 
-            return f"🌟 TIME OF NEED: {self.name} is filled with sudden determination! (+20 HP)"
-
-        elif self.__health < 30 and roll < 40:
-            self.mood = "Panic"
-            return f"😨 PANIC: {self.name} is trembling. Her focus is breaking!"
-            
-        elif roll > 85:
-            self.mood = "Inspired"
-            return f"✨ INSPIRED: Arcane energy swirls perfectly around {self.name}!"
-
-        elif roll < 15:
+            self.__health += 30 
+            for k in self.statuses: self.statuses[k] = False
+            return f"🌟 TIME OF NEED: {self.name} clears all debuffs and heals! (+30 HP)"
+        elif roll < 20:
             self.mood = "Mana Surge"
-            self.__mana += 15
-            if self.__mana > 100: self.__mana = 100
-            return f"🔵 SURGE: Leylines pulse beneath {self.name}! (+15 Mana)"
-            
-        else:
-            self.mood = "Normal"
-            return random.choice([
-                f"💨 The wind howls across the battlefield...",
-                f"👀 {self.name} analyzes the enemy's stance.",
-                f"⚡ Static electricity crackles in the air."
-            ])
+            self.__mana = min(self.__mana + 20, 100)
+            return f"🔵 SURGE: Leylines pulse beneath {self.name}! (+20 Mana)"
+        self.mood = "Normal"
+        return f"✨ Arcane energy hums around {self.name}."
 
     def take_damage(self, amount):
-        self.__health -= amount
-        if self.__health < 0: self.__health = 0
-        return f"🧙 {self.name}'s barrier takes {amount} damage!"
+        if self.statuses["barrier"]:
+            self.statuses["barrier"] = False
+            self.__mana = min(self.__mana + 20, 100)
+            return 0, "BARRIER"
+            
+        actual = amount
+        if self.statuses["dmg_reduction"]: actual //= 2
+        if self.statuses["vulnerable"]: actual += 10
+
+        self.__health = max(self.__health - actual, 0)
+        return actual, "HIT"
 
     def attack(self, target):
-        if self.mood == "Panic" and random.randint(1, 100) < 50:
-            return f"❌ {self.name} fumbles the incantation!"
-        damage = self.attack_power
-        if self.mood == "Inspired": damage += 10
-        if self.mood == "Last Stand": damage *= 2
-        self.__mana += 10 
-        if self.__mana > 100: self.__mana = 100
-        msg1 = f"✨ {self.name} fires a magic missile!"
-        msg2 = target.take_damage(damage)
-        return f"{msg1}\n   {msg2}"
+        element = random.choice(["Fire", "Thunder", "Water"])
+        dmg, effect = target.take_damage(self.attack_power)
+        
+        if effect in ["PARRY", "BARRIER"]: return f"💥 The spell was deflected by {target.name}!"
+        
+        if element == "Fire":
+            target.statuses["burn_turns"] = 2
+            return f"🔥 FIREBALL! {target.name} takes {dmg} dmg and is IGNITED!"
+        elif element == "Thunder":
+            if random.randint(1, 100) > 60:
+                target.statuses["stunned"] = True
+                return f"⚡ CHAIN LIGHTNING! {target.name} takes {dmg} dmg and is STUNNED!"
+            return f"⚡ LIGHTNING BOLT! {target.name} takes {dmg} dmg."
+        else: # Water
+            self.__health = min(self.__health + 10, self.max_health)
+            self.__mana = min(self.__mana + 15, 100)
+            return f"🌊 WATER BLAST! {target.name} takes {dmg} dmg. {self.name} siphons HP & Mana!"
 
     def special_move(self, target):
-        if self.mood == "Panic" and random.randint(1, 100) < 30:
-            return f"❌ {self.name} panics and drops the fireball!"
-        mana_cost = 0 if self.mood == "Inspired" else 40
-        if self.__mana >= mana_cost:
-            self.__mana -= mana_cost
-            damage = 40 if self.mood == "Last Stand" else 30
-            msg1 = f"🔥 {self.name} casts PYROBLAST!"
-            msg2 = target.take_damage(damage)
-            return f"{msg1}\n   {msg2}"
-        return f"❌ {self.name} is out of Mana!"
+        if self.__mana >= 40:
+            self.__mana -= 40
+            dmg, effect = target.take_damage(40)
+            if effect in ["PARRY", "BARRIER"]: return f"💥 PYROBLAST was deflected!"
+            return f"🌋 PYROBLAST! {target.name} takes {dmg} massive damage!"
+        return f"❌ Out of Mana!"
 
     def heal(self):
         if self.__mana >= 30:
             self.__mana -= 30
-            self.__health += 40
-            if self.__health > self.max_health: self.__health = self.max_health
-            return f"💚 {self.name} casts Healing Spell! Restored 40 HP."
-        return f"❌ {self.name} lacks Mana to heal!"
+            self.__health = min(self.__health + 40, self.max_health)
+            return f"💚 Healing Spell! Restored 40 HP."
+        return f"❌ Lacks Mana to heal!"
+
+    def defend(self):
+        if random.randint(1, 100) > 50:
+            self.statuses["barrier"] = True
+            return f"🛡️ {self.name} conjures an Arcane Barrier! Deflects next attack & restores Mana!"
+        self.statuses["dmg_reduction"] = True
+        return f"🛡️ {self.name} casts Shield. Incoming damage halved!"
+
+    def utility(self, target):
+        self.__mana = min(self.__mana + 40, 100)
+        self.statuses["dmg_reduction"] = True
+        return f"🧘 CHANNEL MANA: {self.name} focuses deeply. (+40 Mana, Damage Halved next turn)"
