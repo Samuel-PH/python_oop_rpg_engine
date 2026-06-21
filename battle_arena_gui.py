@@ -1,18 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
-import random
 from characters.warrior import Warrior
-from characters.mage import Mage
+from enemies.monsters import DemonLord
 
 class BattleArenaGUI:
     def __init__(self, window):
         self.window = window
-        self.window.title("OOP Retro Battle Arena")
-        self.window.geometry("600x550")
+        self.window.title("Retro Battle Arena")
+        self.window.geometry("600x600")
         self.window.configure(bg="#1e272e") 
-
+        
         self.player = Warrior("Arthas (You)")
-        self.enemy = Mage("Jaina (AI)")
+        self.enemy = DemonLord()
         
         self.setup_ui()
 
@@ -36,13 +35,13 @@ class BattleArenaGUI:
         p2_frame.pack(side=tk.RIGHT)
         self.p2_label = tk.Label(p2_frame, text=f"{self.enemy.name}", bg="#1e272e", fg="white", font=("Arial", 12, "bold"))
         self.p2_label.pack()
-        self.p2_hp_bar = ttk.Progressbar(p2_frame, length=150, maximum=80, value=self.enemy.get_health())
+        self.p2_hp_bar = ttk.Progressbar(p2_frame, length=150, maximum=250, value=self.enemy.get_health())
         self.p2_hp_bar.pack(pady=2)
         self.p2_res_bar = ttk.Progressbar(p2_frame, length=150, maximum=100, value=self.enemy.get_resource())
         self.p2_res_bar.pack()
-        tk.Label(p2_frame, text="Red: HP | Blue: Mana", bg="#1e272e", fg="gray", font=("Arial", 8)).pack()
+        tk.Label(p2_frame, text="Red: HP | Blue: Magic", bg="#1e272e", fg="gray", font=("Arial", 8)).pack()
 
-        self.combat_log = tk.Text(self.window, height=12, width=65, bg="black", fg="#0be881", font=("Courier", 10))
+        self.combat_log = tk.Text(self.window, height=14, width=65, bg="black", fg="#0be881", font=("Courier", 10))
         self.combat_log.pack(pady=20)
         self.log_message("System: Battle Initialized. Player turn.")
 
@@ -65,36 +64,40 @@ class BattleArenaGUI:
 
     def execute_turn(self, action):
         if self.player.get_health() <= 0 or self.enemy.get_health() <= 0:
-            return
+            return 
+
+        mood_msg = self.player.roll_mood()
 
         if action == "attack":
-            msg = self.player.attack(self.enemy)
+            action_msg = self.player.attack(self.enemy)
         elif action == "special":
-            msg = self.player.special_move(self.enemy)
-            if "❌" in msg: 
-                self.log_message(msg)
+            action_msg = self.player.special_move(self.enemy)
+            if "❌" in action_msg: 
+                self.log_message(action_msg)
                 return
         elif action == "heal":
-            msg = self.player.heal()
+            action_msg = self.player.heal()
             
-        self.log_message(f"--- YOUR TURN ---\n{msg}")
+        self.log_message(f"--- YOUR TURN ---\n{mood_msg}\n{action_msg}")
         self.update_bars()
 
         if self.enemy.get_health() <= 0:
             self.log_message("🏆 VICTORY! The enemy has been defeated!")
             return
 
-        self.window.after(1000, self.enemy_ai)
+        self.window.after(1000, self.enemy_ai) 
 
     def enemy_ai(self):
-        if self.enemy.get_health() < 30 and self.enemy.get_resource() >= 30:
-            msg = self.enemy.heal()
-        elif self.enemy.get_resource() >= 40:
-            msg = self.enemy.special_move(self.player)
-        else:
-            msg = self.enemy.attack(self.player)
+        mood_msg = self.enemy.roll_mood()
 
-        self.log_message(f"--- ENEMY TURN ---\n{msg}")
+        if self.enemy.get_health() < 50 and self.enemy.get_resource() >= 30:
+            action_msg = self.enemy.heal()
+        elif self.enemy.get_resource() >= 50:
+            action_msg = self.enemy.special_move(self.player)
+        else:
+            action_msg = self.enemy.attack(self.player)
+
+        self.log_message(f"--- ENEMY TURN ---\n{mood_msg}\n{action_msg}")
         self.update_bars()
 
         if self.player.get_health() <= 0:
@@ -104,4 +107,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BattleArenaGUI(root)
     root.mainloop()
-
