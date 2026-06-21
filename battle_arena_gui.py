@@ -53,25 +53,15 @@ class BattleArenaGUI:
         tk.Button(btn_frame, text="💥 Special", command=lambda: self.execute_turn("special"), bg="#ff3f34", fg="white", width=12).grid(row=0, column=1, padx=10)
         tk.Button(btn_frame, text="🩹 Heal", command=lambda: self.execute_turn("heal"), bg="#05c46b", fg="white", width=12).grid(row=0, column=2, padx=10)
 
-
-
-
     def log_message(self, message):
         self.combat_log.insert(tk.END, message + "\n\n")
         self.combat_log.see(tk.END) 
-
-
-
-
 
     def update_bars(self):
         self.p1_hp_bar["value"] = self.player.get_health()
         self.p1_res_bar["value"] = self.player.get_resource()
         self.p2_hp_bar["value"] = self.enemy.get_health()
         self.p2_res_bar["value"] = self.enemy.get_resource()
-
-
-
 
     def execute_turn(self, action):
         if self.player.get_health() <= 0 or self.enemy.get_health() <= 0:
@@ -96,8 +86,6 @@ class BattleArenaGUI:
 
         self.window.after(1000, self.enemy_ai)
 
-
-
     def enemy_ai(self):
         if self.enemy.get_health() < 30 and self.enemy.get_resource() >= 30:
             msg = self.enemy.heal()
@@ -112,11 +100,8 @@ class BattleArenaGUI:
         if self.player.get_health() <= 0:
             self.log_message("💀 DEFEAT! You have fallen in battle...")
 
-
-
 if __name__ == "__main__":
     root = tk.Tk()
     app = BattleArenaGUI(root)
     root.mainloop()
 
-    

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
 class AbstractCharacter(ABC):
-    
     @abstractmethod
     def attack(self, target): pass
         
@@ -19,3 +18,6 @@ class AbstractCharacter(ABC):
     
     @abstractmethod
     def get_resource(self): pass
+
+    @abstractmethod
+    def roll_mood(self): pass
